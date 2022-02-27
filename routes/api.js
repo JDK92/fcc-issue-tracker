@@ -6,7 +6,7 @@ const { request, response } = require("express");
 
 const mongoose = require("mongoose");
 
-const { model, Schema } = mongoose;
+const { model, Schema, isValidObjectId } = mongoose;
  
 const url    = process.env.MONGO_URI;
 
@@ -43,10 +43,9 @@ module.exports =  (app) => {
           return data;
         });
 
-        console.log(JSON.stringify(documents));
         return res.json(documents);
       } catch (err) {
-        return res.json({ error: "couldn't get issues"});
+        return res.status(500).json({ error: "couldn't get issues"});
       }
     })
 
@@ -56,7 +55,7 @@ module.exports =  (app) => {
         const { issue_title, issue_text, created_by, ...optionalFields } = req.body;
 
         if (!issue_title || !issue_text || !created_by ) {
-          return res.json({ error: "required field(s) missing" });
+          return res.status(400).json({ error: "required field(s) missing" });
         }
 
         const newIssue = new Issue({ issue_title, issue_text, created_by, ...optionalFields });
@@ -68,7 +67,7 @@ module.exports =  (app) => {
         return res.json(data);
         
       } catch (err) {
-        return res.json({ error: "Could not post new issue. Try again." });
+        return res.status(400).json({ error: "Could not post new issue. Try again." });
       }
     })
     
@@ -76,26 +75,25 @@ module.exports =  (app) => {
       try {
         const { _id, ...data } = req.body;
 
-        if (!_id) return res.json({ error: "missing _id" });
+        if (!_id) return res.status(400).json({ error: "missing _id" });
+        if(!isValidObjectId(_id)) throw "No document found";
+        
+        const collection = await getCollection(req.params.project);
+
+        const document = await collection.findOne({ _id });
+
+        if (!document) throw "No document found";
 
         if (Object.values(data).length == 0) {
-          return res.json({ error: "no update field(s) sent", "_id": _id });
+          return res.status(400).json({ error: "no update field(s) sent", "_id": _id });
         }
 
-        const collection = await getCollection(req.params.project);
-        const document   = await collection.findByIdAndUpdate(
-                            req.body._id, {
-                            ...data, updated_on: new Date()
-                          });
-
-        if (!document) {
-          throw "No document found";
-        }
+        await collection.findByIdAndUpdate( req.body._id, { ...data, updated_on: new Date() });
 
         res.json({ result: "successfully updated", "_id": _id });
 
       } catch (error) {
-        return res.json({ error: "could not update", "_id": req.body._id });
+        return res.status(400).json({ error: "could not update", "_id": req.body._id });
       }
 
       
@@ -104,10 +102,9 @@ module.exports =  (app) => {
     .delete(async (req = request, res = response) => {
       try {
         const { _id } = req.body;
+        if (!_id) return res.status(400).json({ error: "missing _id" });
+        
         const collection = await getCollection(req.params.project);
-
-        if (!_id) return res.json({ error: "missing _id" });
-
         const deletedDocument = await collection.findByIdAndDelete(_id);
 
         if (!deletedDocument) {
@@ -119,7 +116,7 @@ module.exports =  (app) => {
 
 
       } catch (error) {
-        return res.json({ error: "could not delete", "_id": req.body._id });
+        return res.status(400).json({ error: "could not delete", "_id": req.body._id });
       }
     });
 };
