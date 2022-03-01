@@ -3,9 +3,14 @@ const chai = require('chai');
 const assert = chai.assert;
 const server = require('../server');
 
+const { model } = require("mongoose");
+const { Issue } = require('../db');
+
+const collection = model("functional-testing", Issue, "functional-testing");
+
 chai.use(chaiHttp);
 
-suite('Functional Tests', function() {
+suite('Functional Tests', function () {
   test("Create an issue with every field", (done) => {
     chai.request(server)
       .post('/api/issues/functional-testing')
@@ -45,9 +50,10 @@ suite('Functional Tests', function() {
   test("Create an issue with missing required fields", (done) => {
     chai.request(server)
       .post('/api/issues/functional-testing')
-      .send({ issue_text: "Oh no, I missed some fields." })
+      .send({
+        issue_text: "Oh no, I missed some fields."
+      })
       .end((err, res) => {
-        assert.equal(res.status, 400);
         assert.equal(res.body.error, "required field(s) missing");
         done();
       });
@@ -73,7 +79,7 @@ suite('Functional Tests', function() {
         done();
       });
   });
-  
+
   test("View issues on a project with multiple filters", (done) => {
     chai.request(server)
       .get("/api/issues/functional-testing?open=true&created_by=Me")
@@ -87,24 +93,27 @@ suite('Functional Tests', function() {
   });
 
   test("Update one field on an issue", (done) => {
+   collection.findOne({}, (err, doc) => {
     chai.request(server)
-      .put("/api/issues/functional-testing")
-      .send({
-        _id: "621bc707b9cc296940c62546",
-        issue_text: "This is a new text"
-      })
-      .end((err, res) => {
-        assert.equal(res.status, 200);
-        assert.equal(res.body.result, "successfully updated");
-        done();
-      });
+    .put("/api/issues/functional-testing")
+    .send({
+      _id: doc._id.toString(),
+      issue_text: "I got this from DB"
+    })
+    .end((err, res) => {
+      assert.equal(res.status, 200);
+      assert.equal(res.body.result, "successfully updated");
+      done();
+    });
+   });
   });
 
   test("Update multiple fields on an issue", (done) => {
-    chai.request(server)
+    collection.findOne({}, (err, doc) => {
+      chai.request(server)
       .put("/api/issues/functional-testing")
       .send({
-        _id: "621bc707b9cc296940c62546",
+        _id: doc._id.toString(),
         issue_text: "This is a new text",
         created_by: "A GHOOOOST!!"
       })
@@ -113,6 +122,7 @@ suite('Functional Tests', function() {
         assert.equal(res.body.result, "successfully updated");
         done();
       });
+    });
   });
 
   test("Update an issue with missing", (done) => {
@@ -122,23 +132,23 @@ suite('Functional Tests', function() {
         created_by: "A GHOOOOST!!"
       })
       .end((err, res) => {
-        assert.equal(res.status, 400);
         assert.equal(res.body.error, "missing _id");
         done();
       });
   });
 
   test("Update an issue with no fields to update", (done) => {
-    chai.request(server)
+    collection.findOne({}, (err, doc) => {
+      chai.request(server)
       .put("/api/issues/functional-testing")
       .send({
-        _id: "621bc707b9cc296940c62546"
+        _id: doc._id.toString()
       })
       .end((err, res) => {
-        assert.equal(res.status, 400);
         assert.equal(res.body.error, "no update field(s) sent");
         done();
       });
+    });
   });
 
   test("Update an issue with an invalid _id", (done) => {
@@ -148,23 +158,24 @@ suite('Functional Tests', function() {
         _id: "621bc5cd57b785b2de9999dp"
       })
       .end((err, res) => {
-        assert.equal(res.status, 400);
         assert.equal(res.body.error, "could not update");
         done();
       });
   });
 
   test("Delete an issue", (done) => {
+   collection.findOne({}, (err, doc) => {
     chai.request(server)
-      .delete("/api/issues/functional-testing")
-      .send({
-        _id: "621bc5cd57b785b2de9999e1"
-      })
-      .end((err, res) => {
-        assert.equal(res.status, 200);
-        assert.equal(res.body.result, "successfully deleted");
-        done();
-      });
+    .delete("/api/issues/functional-testing")
+    .send({
+      _id: doc._id.toString()
+    })
+    .end((err, res) => {
+      assert.equal(res.status, 200);
+      assert.equal(res.body.result, "successfully deleted");
+      done();
+    });
+   });
   });
 
   test("Delete an issue with an invalid _id", (done) => {
@@ -174,7 +185,6 @@ suite('Functional Tests', function() {
         _id: "621bc6d716cadf95d22fa5c1"
       })
       .end((err, res) => {
-        assert.equal(res.status, 400);
         assert.equal(res.body.error, "could not delete");
         done();
       });
@@ -185,7 +195,6 @@ suite('Functional Tests', function() {
       .delete("/api/issues/functional-testing")
       .send({})
       .end((err, res) => {
-        assert.equal(res.status, 400);
         assert.equal(res.body.error, "missing _id");
         done();
       });
