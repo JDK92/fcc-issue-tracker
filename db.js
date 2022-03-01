@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 
 const { model, Schema, isValidObjectId } = mongoose;
  
-const url    = process.env.MONGO_URI;
+const url = process.env.MONGO_URI;
 
 const connectDB = async () => {
   try {

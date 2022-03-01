@@ -1,10 +1,11 @@
-const chaiHttp = require('chai-http');
-const chai = require('chai');
-const assert = chai.assert;
-const server = require('../server');
-
+const chai      = require('chai');
+const chaiHttp  = require('chai-http');
 const { model } = require("mongoose");
+
+const server    = require('../server');
 const { Issue } = require('../db');
+
+const assert = chai.assert;
 
 const collection = model("functional-testing", Issue, "functional-testing");
 
